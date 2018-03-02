@@ -90,7 +90,7 @@ def loadData(filename):
     with open(filename, 'r', encoding='utf-8') as file_object:
         for line in file_object:
             rna_sequences.append(line[:-1])
-    print('Data is loaded from: '+filename)
+    # print('Data is loaded from: '+filename)
 
     # vectorize all RNA sequences
     array_map = {
@@ -120,9 +120,9 @@ def getDataSet(positive_file_url, negative_file_url):
     vec_neg = loadData(negative_file_url)
 
     # assert len(vec_pos) == len(vec_neg)
-    print('Load data from %s successfully, data length: %d'%(positive_file_url, len(vec_pos)))
+    print('Load data from %s, data length: %d'%(positive_file_url, len(vec_pos)))
 
-    print('Load data from %s successfully, data length: %d'%(negative_file_url, len(vec_neg)))
+    print('Load data from %s, data length: %d'%(negative_file_url, len(vec_neg)))
 
     for index in range(len(vec_pos)):
         if index % 5 == 0:
