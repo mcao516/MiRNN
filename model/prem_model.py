@@ -255,10 +255,13 @@ class Model(BaseModel):
         """
         batch_size = self.config.batch_size
 
-        tp = 0. # pred: positive, label: positive
-        fn = 0. # pred: positive, lable: negative
-        correct_preds = 0. # total number of correct predictions
-        total_preds = 0. # total number of predictions
+        tp = 0 # pred: positive, label: positive
+        tn = 0 # pred: negative, label: negative
+        fp = 0 # pred: negative, label: positive
+        fn = 0 # pred: positive, label: negative
+
+        correct_preds = 0 # total number of correct predictions
+        total_preds = 0 # total number of predictions
 
         for inputs, labels in minibatches(test, batch_size):
             # labels_pred: [batch_size]
@@ -272,24 +275,35 @@ class Model(BaseModel):
                     correct_preds += 1
                     if lab == 1 and lab_pred == 1:
                         tp += 1
+                    elif lab == 0 and lab_pred == 0:
+                        tn += 1
                 else:
                     if lab == 0 and lab_pred == 1:
                         fn += 1
+                    elif lab == 1 and lab_pred == 0:
+                        fp += 1
 
         # P = TP/(TP+FP)  R = TP/(TP+FN)
         # F1 = 2*P*R/(P+R)  ACCURACY = (TP+TN)/TOTAL
-        fp = (total_preds - correct_preds) - fn
+        assert correct_preds == (tp + tn)
+        assert (total_preds - correct_preds) == (fp + fn)
 
-        p   = tp / (tp + fp) if tp > 0 else 0
-        r   = tp / (tp + fn) if tp > 0 else 0
+        p   = tp / (tp + fp) if tp > 0 else 0 # precision
+        r   = tp / (tp + fn) if tp > 0 else 0 # recall
+        se = tp / (tp + fn) if tp > 0 else 0 # sensitivity
+        sp = tn / (fp + tn) if tn > 0 else 0 # specificity
+
         f1  = 2 * p * r / (p + r) if (p + r) > 0 else 0
         acc = correct_preds/total_preds
+        mcc = (tp*tn - fp*fn)/math.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
 
         dic = collections.OrderedDict()
-
         dic['p'] = 100*p
         dic['r'] = 100*r
+        dic['se'] = 100*se
+        dic['sp'] = 100*sp
         dic['acc'] = 100*acc
         dic['f1'] = 100*f1
+        dic['mcc'] = 100*mcc
 
         return dic
