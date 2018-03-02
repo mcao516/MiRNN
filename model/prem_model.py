@@ -2,6 +2,7 @@ import numpy as np
 import os
 import tensorflow as tf
 import collections
+import math
 
 from .utils import Progbar
 from .model import BaseModel
