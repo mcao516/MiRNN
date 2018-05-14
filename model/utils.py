@@ -2,6 +2,11 @@ import time
 import sys
 import logging
 import numpy as np
+import matplotlib.pyplot as plt  
+from sklearn import svm, datasets  
+from sklearn.metrics import roc_curve, auc  ###计算roc和auc  
+from sklearn import cross_validation 
+from itertools import cycle
 
 def get_logger(filename):
     """Return a logger instance that writes in filename
@@ -24,6 +29,72 @@ def get_logger(filename):
 
     return logger
 
+
+def draw_ROC(y_score, y_test):
+    """Draw ROC curve
+
+    Args:
+        y_score: list of prediction scores
+        y_test: list of labels
+        
+        
+    Returns:
+        logger: (instance of logger)
+
+    """
+    # Compute ROC curve and ROC area for each class  
+    fpr, tpr, threshold = roc_curve(y_test, y_score) # compute fp and tp
+    roc_auc = auc(fpr,tpr) # compute auc
+    
+    plt.figure()
+    lw = 2
+    plt.figure(figsize=(7,7))
+    plt.plot(fpr, tpr, color='darkorange', 
+        lw=lw, label='ROC curve (area = %0.2f)' % roc_auc)
+    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver operating characteristic example')
+    plt.legend(loc="lower right")
+    plt.savefig('pics/draw.png')
+    plt.show()
+
+
+def draw_multi_ROC(score, label, lw=2):
+    """Draw multi ROC curves
+    Args:
+        y_score: numpy.ndarray, each column represents the score of one class
+        y_test: numpy.ndarray, each column represents the label of one class
+        
+    """
+    assert len(score) == len(label)
+    n_classes = len(score)
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    
+    for i in range(n_classes):
+        fpr[i], tpr[i], _ = roc_curve(label[i], score[i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+    
+    plt.figure()
+    colors = cycle(['aqua', 'darkorange', 'cornflowerblue'])
+    for i, color in zip(range(n_classes), colors):
+        plt.plot(fpr[i], tpr[i], color=color, lw=lw, 
+            label='ROC curve of class {0} (area = {1:0.2f})'.format(i, roc_auc[i]))
+    
+    # draw a diagonal
+    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('The performance of our classifier on different species')
+    plt.legend(loc="lower right")
+    plt.savefig('pics/draw.png')
+    plt.show()
 
 class Progbar(object):
     """

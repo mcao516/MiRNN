@@ -1,14 +1,12 @@
-from random import randint
 
 def minibatches(data, minibatch_size):
     """
     Args:
-        data: generator of (inputs, tags) tuples
+        data: generator of (sentence, tags) tuples
         minibatch_size: (int)
-
+        
     Yields:
-        tuple of inputs and labels list
-
+        list of tuples
     """
     x_batch, y_batch = [], []
     for (x, y) in data:
@@ -16,122 +14,142 @@ def minibatches(data, minibatch_size):
             yield x_batch, y_batch
             x_batch, y_batch = [], []
 
+        if type(x[0]) == tuple:
+            x = zip(*x)
         x_batch += [x]
         y_batch += [y]
 
     if len(x_batch) != 0:
         yield x_batch, y_batch
 
-    # x_batch, y_batch = [], []
 
-    # length = len(data)
-    # for _ in range(minibatch_size):
-    #     rand_index = randint(0, length)
-
-    #     (x, y) = data[rand_index]
-
-    #     x_batch += [x]
-    #     y_batch += [y]
-
-    # return x_batch, y_batch
-
-def pad_sequence(inputs, max_length=200, default=[0, 0, 0, 0]):
+def read_seq_and_structure(file_name):
     """
     Args:
-        inputs: list of encoded rna sequence
-        max_length: the max_num length of each list
-
+        file_name: file url. The format of the file must be:
+            1. first line: ">" + "file name"
+            2. second line: RNA sequence 
+            3. secondary structure
+            RNA sequence and secondary structure should have the same
+            length
+    Return:
+        seq_structure: list of sequence and structure tuples
+            [("GCUUG", ".)).)"), ...]
     """
-    padded = []
-    for item in inputs:
-        length = len(item)
-        if length > max_length:
-            padded.append(item[:max_length])
-        else:
-            to_pad = max_length - length
-            padded.append(item + [default]*to_pad)
-    
-    return padded
+    seq_structure = []
+    file_object = open(file_name, 'r', encoding='utf-8')
+    tag = file_object.readline()
+    while tag:
+        if len(tag) > 0 and tag[0] == '>':
+            # read sequence and structure
+            sequence = file_object.readline().strip()
+            structure  = file_object.readline().strip()
+            assert len(sequence) == len(structure)
+            seq_structure.append((sequence, structure))
+            tag = file_object.readline()
+    file_object.close()
+    return seq_structure
 
-def vectorize(rna_list, array_map, default=[0, 0, 0, 0]):
-    """vectorize input rna sequence
+
+def encoding_sequence(sequences, seq_dic = {'A': 0, 'C': 1, 'G': 2, 'U': 3}, 
+    ss_dic  = {'.': 0, '(': 1, ')': 1}):
+    """Encoding RNA sequnce and secondary structure
 
     Args:
-        rna_list: a list of rna sequences
-        array_map: one-hot encoding map
-        default: for unknown rna
+        sequences: list of tuples of (RNA sequence, secondary structure)
     
-    Returns:
-        a list of one-hot encoded rna sequences
+    Return:
+        sequence_structures: list of encoded RNA sequenes, which are list of    
+            nucleotide id and pair-status id tuples
+            [[(4, 0), (1, 0), (4, 0), ...], [], [], ...]
     """
-    vecRNA = []
-    for seq in rna_list:
-        vecSeq = []
-        for n in seq:
-            if array_map.__contains__(n):
-                vecSeq.append(array_map[n])
-            else:
-                vecSeq.append(default)
-        vecRNA.append(vecSeq)
-    
-    return vecRNA
+    sequence_structures = []
+    for seq, ss in sequences:
+        seq_ss = []
+        assert len(seq) == len(ss)
+        for n, s in zip(seq, ss):
+            n = seq_dic.get(n, 0)
+            s = ss_dic.get(s, 0)
+            seq_ss.append((n, s))
+        sequence_structures.append(seq_ss)
 
-def loadData(filename):
-    """load data set and vectorize to array
+    assert len(sequence_structures) == len(sequences)
+    return sequence_structures
+
+
+def getDataSet(pos_file, neg_file):
+    """Read file and create train and dev set
 
     Args:
-        glove_filename: a path to data set
-    
-    Returns:
-        one-hot encoded rna sequences
-    """
-
-    rna_sequences = []
-    with open(filename, 'r', encoding='utf-8') as file_object:
-        for line in file_object:
-            rna_sequences.append(line[:-1])
-    # print('Data is loaded from: '+filename)
-
-    # vectorize all RNA sequences
-    array_map = {
-        'A': [1, 0, 0, 0], 'C': [0, 1, 0, 0], 
-        'G': [0, 0, 1, 0], 'U': [0, 0, 0, 1], 
-        'N': [0, 0, 0, 0]}
-    vec_sequence = vectorize(rna_sequences, array_map)
-    assert len(vec_sequence) == len(rna_sequences)
-
-    return vec_sequence
-
-def getDataSet(positive_file_url, negative_file_url):
-    """Combine input data with labels
-
-    Args:
-        positive_file_url: a path to positive data set
+        positive_file_url: a path to positive data set. 
+            The format of the file must be:
+            1. first line: ">" + "file name"
+            2. second line: RNA sequence 
+            3. secondary structure
+            RNA sequence and secondary structure should have the same
+            length
         negative_file_url: a path to negative data set
-    
-    Returns:
-        list of tuple (input, label)
     """
-
     train = []
     dev = []
 
-    vec_pos = loadData(positive_file_url)
-    vec_neg = loadData(negative_file_url)
+    pos_seq_structures = encoding_sequence(read_seq_and_structure(pos_file))
+    neg_seq_structures = encoding_sequence(read_seq_and_structure(neg_file))
 
     # assert len(vec_pos) == len(vec_neg)
-    print('Load data from %s, data length: %d'%(positive_file_url, len(vec_pos)))
+    print('Load data from %s successfully, data length: %d'%(pos_file, len(pos_seq_structures)))
 
-    print('Load data from %s, data length: %d'%(negative_file_url, len(vec_neg)))
+    print('Load data from %s successfully, data length: %d'%(neg_file, len(neg_seq_structures)))
 
-    for index in range(len(vec_pos)):
+    for index in range(len(pos_seq_structures)):
         if index % 5 == 0:
-            dev.append((vec_pos[index], 1))
-            dev.append((vec_neg[index], 0))
+            dev.append((pos_seq_structures[index], 1))
+            dev.append((neg_seq_structures[index], 0))
         else:
-            train.append((vec_pos[index], 1))
-            train.append((vec_neg[index], 0))
+            train.append((pos_seq_structures[index], 1))
+            train.append((neg_seq_structures[index], 0))
         index += 1
     
     return (train, dev)
 
+
+def pad_sequence(sequences, pad_tok, max_length, window_size=0):
+    """
+    Args:
+        sequences: a generator of list or tuple
+        pad_tok: the char to pad with
+
+    Returns:
+        a list of list where each sublist has same length
+    """
+    sequence_padded, sequence_length = [], []
+
+    for seq in sequences:
+        seq = list(seq)
+        seq_ = seq[:max_length] + [pad_tok]*max(max_length - len(seq), 0)
+        # create window
+        seq_ = create_window(seq_, window_size)
+        
+        sequence_padded +=  [seq_]
+        sequence_length += [min(len(seq), max_length) - 2*window_size]
+
+    return sequence_padded, sequence_length
+
+
+def create_window(sequence, window_size):
+    """Create window for a giving sequence
+
+    Args:
+        sequence: list of data
+        window_size: size of the window, int
+    """
+    windowed_seq = []
+    assert len(sequence) > 2*window_size
+    # for item in sequence[window_size, -window_size]:
+    if window_size == 0:
+        return [[i] for i in sequence]
+    else:
+        for i in range(len(sequence))[window_size: -window_size]:
+            neighbors = [i - window_size + j for j in range(2*window_size + 1)]
+            windowed_seq.append([sequence[nindex] for nindex in neighbors])
+        return windowed_seq

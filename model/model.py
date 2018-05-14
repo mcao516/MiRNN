@@ -138,8 +138,10 @@ class BaseModel(object):
                             "improvement".format(nepoch_no_imprv))
                     break
 
+
     def run_evaluate(self, test):
         raise NotImplementedError("'run_evaluate' method is NOT implemented")
+
 
     def evaluate(self, test):
         """Evaluate model on test set
