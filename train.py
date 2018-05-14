@@ -1,6 +1,5 @@
 from model.data_utils import getDataSet
-from model.prem_model import Model
-from model.prem_model_old import Model as Simple_Model
+from model.miRNA_model import Model
 from model.config import Config
 
 def main():
@@ -14,11 +13,13 @@ def main():
     # model.reinitialize_weights("proj")
 
     # create datasets
-    train, dev = getDataSet('data/train/hairpin.txt', 'data/train/mrna.txt')
+    train, dev = getDataSet('data/train/pos_sample.txt', 
+        'data/train/neg_sample.txt')
 
     # train model
-    model.train(train[:40], dev[:40])
-    model.evaluate(train[:40] + dev[:40])
+    model.train(train, dev)
+    model.evaluate(dev)
+
 
 if __name__ == "__main__":
     main()
