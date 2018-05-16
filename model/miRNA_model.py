@@ -121,11 +121,11 @@ class Model(BaseModel):
 
             # concat
             # look_up: [batch_size, max_length, struc_size + nucle_size]
-            sequence_embeddings = tf.concat([nucle_embeddings, 
+            self.sequence_embeddings = tf.concat([nucle_embeddings, 
                 struc_embeddings], axis=-1)
 
-        self.sequence_embeddings =  tf.nn.dropout(sequence_embeddings, 
-            self.dropout_placeholder)
+        # self.sequence_embeddings =  tf.nn.dropout(sequence_embeddings, 
+        #     self.dropout_placeholder)
 
 
     def add_logits_op(self):
@@ -178,7 +178,7 @@ class Model(BaseModel):
             # z1: [batch_size, class_num]
             logits = tf.matmul(output, W1) + b1
             
-        logits = tf.nn.dropout(logits, self.dropout_placeholder)
+        # logits = tf.nn.dropout(logits, self.dropout_placeholder)
 
         return logits
 
